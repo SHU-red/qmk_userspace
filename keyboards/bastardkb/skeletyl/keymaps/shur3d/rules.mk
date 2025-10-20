@@ -1,0 +1,3 @@
+VIA_ENABLE = yes
+VIAL_ENABLE = no
+TAP_DANCE_ENABLE = no
