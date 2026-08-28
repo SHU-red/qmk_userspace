@@ -28,7 +28,8 @@ EXTRA_LAYOUTS_DIR = Path(__file__).resolve().parent / "extra_layouts"
 # instead of named layers. Keyed by (board, keymap folder).
 FIXED_LAYER_NAMES = {
     ("bastardkb/scylla", "vendor"): ["Base", "Symbols", "Function"],
-    ("bastardkb/skeletyl", "vendor"): ["Base", "Numerals", "Symbols", "RGB"],
+    ("bastardkb/skeletyl", "shur3d"): ["Base", "Symbols", "Media/Nav", "RGB/Fn"],
+    ("bastardkb/tbkmini", "vendor"): ["Base", "Numerals", "Symbols", "RGB"],
     ("bastardkb/tbkmini", "vendor"): ["Base", "Numerals", "Symbols", "RGB"],
 }
 
@@ -113,15 +114,25 @@ def main():
         if not keyboard_json.exists() and (board_dir / "info.json").exists():
             shutil.copy(board_dir / "info.json", keyboard_json)
 
+        # keymaps that only exist in the userspace repo (e.g. shur3d) must be
+        # mirrored into the QMK checkout or `qmk c2json` rejects them.
+        qmk_keymap_dir = board_dir / "keymaps" / keymap_name
+        if not qmk_keymap_dir.exists():
+            shutil.copytree(keymap_c.parent, qmk_keymap_dir)
+
         with tempfile.TemporaryDirectory() as tmp:
             td = Path(tmp)
             keymap_json_path = td / "keymap.json"
             keymap_yaml = td / "keymap.yaml"
 
-            run(
-                ["qmk", "c2json", "-kb", board, "-km", keymap_name, keymap_c, "-o", keymap_json_path],
-                env={**os.environ, "QMK_HOME": str(qmk_home)},
-            )
+            # Some keymaps include headers c2json's preprocessor cannot resolve
+            # (e.g. keymap_german.h); retry without cpp — c2json still expands
+            # LAYOUT macros itself, so output is equivalent.
+            c2json_cmd = ["qmk", "c2json", "-kb", board, "-km", keymap_name, keymap_c, "-o", keymap_json_path]
+            try:
+                run(c2json_cmd, env={**os.environ, "QMK_HOME": str(qmk_home)})
+            except subprocess.CalledProcessError:
+                run([*c2json_cmd[:2], "--no-cpp", *c2json_cmd[2:]], env={**os.environ, "QMK_HOME": str(qmk_home)})
 
             # c2json keeps named layer tokens (e.g. "LT(LAYER_POINTER, KC_Z)"),
             # but the keymap-drawer parser only understands numeric indices.
