@@ -13,15 +13,19 @@ jobs:
       qmk_repo: bastardkb/bastardkb-qmk
       # PINNED — do not move this to a moving branch.
       # bkb-master-archive (frozen 2025-08-10) is the archived bkb-master
-      # branch and contains the classic base `bastardkb/skeletyl` board:
-      # the discrete Splinky controller ("Skeletyl Splinky", pid 0x1830,
-      # dev 2.0.0, matrix col2 = GP21, MASTER_RIGHT, split serial GP1).
-      # Bastardkb main dropped this board — it now only ships
-      # splinktegrated_rev1/rev3 (the newest integrated controller), which is
-      # NOT the hardware this keymap targets. Pinning to the commit SHA makes
-      # every build byte-identical to the archived "old" firmware, no moving
+      # branch and contains the classic base `bastardkb/skeletyl` board —
+      # the ORIGINAL splinktegrated (built-in controller, Oct/Nov 2025 era):
+      # "Skeletyl Splinky", pid 0x1830, dev 2.0.0, matrix cols GP28/GP21/GP6/
+      # GP7/GP8, rows GP26/GP5/GP4/GP9, ws2812 GP0, MASTER_RIGHT, and the
+      # 1-wire vendor serial driver on GP1.
+      # Bastardkb main restructured this board into splinktegrated_rev1
+      # (same 1-wire GP1 scheme — compatible) and splinktegrated_rev3
+      # (USART full-duplex, TX GP1 / RX GP12 — electrically different, NOT
+      # compatible with this build). Pinning to the commit SHA makes every
+      # build byte-identical to the archived "old" firmware, no moving
       # target. To update deliberately: point to a new commit SHA and verify
-      # the board definition still matches the target Splinky.
+      # the board definition still matches the target splinktegrated rev1
+      # (vendor serial, pin GP1).
       qmk_ref: 8f3b92fff27e6356120913a4ec6b21a017d0fef6
 
   publish:
