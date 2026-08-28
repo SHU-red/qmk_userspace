@@ -97,6 +97,11 @@ def main():
         sys.exit(f"no keymaps found under {KEYMAPS_ROOT}")
     print(f"found {len(keymaps)} keymaps", flush=True)
 
+    try:
+        import cairosvg
+    except ImportError:
+        cairosvg = None
+
     for board, keymap_name, keymap_c in keymaps:
         keymap_src = keymap_c.read_text()
 
@@ -138,6 +143,10 @@ def main():
             out_svg = OUT_DIR / f"{board.replace('/', '_')}_{keymap_name}.svg"
             run(["keymap", "draw", keymap_yaml, "-o", out_svg])
             print(f"  -> {out_svg}", flush=True)
+            if cairosvg is not None:
+                out_png = out_svg.with_suffix(".png")
+                cairosvg.svg2png(url=str(out_svg), write_to=str(out_png), scale=2)
+                print(f"  -> {out_png}", flush=True)
 
 
 if __name__ == "__main__":

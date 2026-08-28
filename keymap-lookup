@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# keymap-lookup — quickly view the generated keymap images.
+#
+# Usage:
+#   keymap-lookup                      interactive picker (fzf if available)
+#   keymap-lookup skeletyl             open a board by name (fuzzy substring match)
+#   keymap-lookup skeletyl --peek      show in the terminal (kitty icat)
+#   keymap-lookup --list               list available keymap images
+#
+# Images come from keymap_images/ (kept up to date by the CI draw workflow).
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/keymap_images"
+ARG="${1:-}"
+MODE="${2:-}"
+
+if [[ "$ARG" == "--list" || "$ARG" == "-l" ]]; then
+    ls -1 "$DIR"/*.png 2>/dev/null | xargs -n1 basename | sed 's/\.png$//'
+    exit 0
+fi
+
+pick() {
+    local opts=("$@")
+    if command -v fzf >/dev/null 2>&1; then
+        printf '%s\n' "${opts[@]}" | fzf --prompt="keymap> " --height=~15
+    else
+        select choice in "${opts[@]}"; do
+            if [[ -n "$choice" ]]; then echo "$choice"; return 0; fi
+        done
+    fi
+}
+
+if [[ -z "$ARG" ]]; then
+    mapfile -t names < <(ls -1 "$DIR"/*.png 2>/dev/null | xargs -n1 basename | sed 's/\.png$//')
+    ARG="$(pick "${names[@]}")"
+else
+    # fuzzy: find the board whose name contains the argument
+    match="$(ls -1 "$DIR"/*.png 2>/dev/null | xargs -n1 basename | sed 's/\.png$//' | grep -i -- "$ARG" | head -1)"
+    if [[ -z "$match" ]]; then
+        echo "no keymap image matches '$ARG' in $DIR" >&2
+        exit 1
+    fi
+    ARG="$match"
+fi
+
+IMG="$DIR/$ARG.png"
+[[ -f "$IMG" ]] || IMG="$DIR/$ARG.svg"
+
+case "$MODE" in
+    --peek | peek)
+        if [[ "$TERM" == *kitty* ]] && command -v kitty >/dev/null 2>&1; then
+            kitty +kitten icat "$IMG"
+        else
+            echo "--peek needs kitty; opening in default viewer instead" >&2
+            xdg-open "$IMG"
+        fi
+        ;;
+    *)
+        xdg-open "$IMG"
+        ;;
+esac
