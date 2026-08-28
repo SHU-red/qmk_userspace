@@ -1,0 +1,44 @@
+name: Draw keymap visualizations
+
+on:
+  workflow_dispatch:  # run manually from the Actions tab
+  push:
+    paths:
+      - "keyboards/**/*.c"
+      - "keymap_drawer/**"
+      - ".github/workflows/draw_keymaps.yaml"
+
+jobs:
+  draw:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # allow the workflow to commit the rendered SVGs
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install keymap-drawer and QMK CLI
+        run: |
+          python -m pip install --quiet keymap-drawer qmk
+
+      - name: Checkout BastardKB QMK firmware (sparse, no submodules)
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://github.com/bastardkb/bastardkb-qmk /tmp/qmk_firmware
+          cd /tmp/qmk_firmware
+          git sparse-checkout set keyboards/bastardkb lib/python quantum data layouts
+          touch requirements.txt requirements-dev.txt
+
+      - name: Render keymap SVGs
+        run: python keymap_drawer/generate.py
+        env:
+          QMK_HOME: /tmp/qmk_firmware
+
+      - name: Commit rendered keymaps
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "[Draw] Update keymap visualizations"
+          file_pattern: keymap_images/
