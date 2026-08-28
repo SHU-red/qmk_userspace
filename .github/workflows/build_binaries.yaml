@@ -11,10 +11,51 @@ jobs:
     uses: qmk/.github/.github/workflows/qmk_userspace_build.yml@main
     with:
       qmk_repo: bastardkb/bastardkb-qmk
-      qmk_ref: bkb-master-archive
+      # PINNED — do not move this to a moving branch.
+      # bkb-master-archive (frozen 2025-08-10) is the archived bkb-master
+      # branch and contains the classic base `bastardkb/skeletyl` board:
+      # the discrete Splinky controller ("Skeletyl Splinky", pid 0x1830,
+      # dev 2.0.0, matrix col2 = GP21, MASTER_RIGHT, split serial GP1).
+      # Bastardkb main dropped this board — it now only ships
+      # splinktegrated_rev1/rev3 (the newest integrated controller), which is
+      # NOT the hardware this keymap targets. Pinning to the commit SHA makes
+      # every build byte-identical to the archived "old" firmware, no moving
+      # target. To update deliberately: point to a new commit SHA and verify
+      # the board definition still matches the target Splinky.
+      qmk_ref: 8f3b92fff27e6356120913a4ec6b21a017d0fef6
 
   publish:
-    name: 'QMK Userspace Publish'
-    uses: qmk/.github/.github/workflows/qmk_userspace_publish.yml@main
+    name: 'Publish firmware release'
     if: always() && !cancelled()
     needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: Firmware
+
+      # Guard: fail loudly if the expected firmware is not produced. This
+      # protects against silent board/keymap drift (e.g. someone repointing
+      # qmk_ref to a branch whose artifact is named differently) — we never
+      # want to release firmware for the wrong controller.
+      - name: Verify expected firmware artifact
+        run: |
+          ls -la Firmware
+          test -f "Firmware/bastardkb_skeletyl_shur3d.uf2" || { echo "ERROR: expected bastardkb_skeletyl_shur3d.uf2 not found"; exit 1; }
+
+      # Each build gets its own immutable release+tag; old releases/tags are
+      # never deleted (the shared qmk publish workflow replaces the "latest"
+      # release and wipes history — that is why releases are created here).
+      - name: Create release
+        uses: softprops/action-gh-release@v3
+        with:
+          token: ${{ github.token }}
+          name: "QMK Firmware ${{ github.sha }}"
+          tag_name: firmware-${{ github.sha }}
+          fail_on_unmatched_files: false
+          draft: false
+          prerelease: false
+          files: |
+            **/*.hex
+            **/*.bin
+            **/*.uf2
