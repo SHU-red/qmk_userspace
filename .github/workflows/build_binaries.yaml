@@ -40,8 +40,9 @@ jobs:
       # want to release firmware for the wrong controller.
       - name: Verify expected firmware artifact
         run: |
-          ls -la Firmware
-          test -f "Firmware/bastardkb_skeletyl_shur3d.uf2" || { echo "ERROR: expected bastardkb_skeletyl_shur3d.uf2 not found"; exit 1; }
+          ls -la
+          test -n "$(find . -maxdepth 2 -name 'bastardkb_skeletyl_shur3d.uf2' -print -quit)" \
+            || { echo "ERROR: expected bastardkb_skeletyl_shur3d.uf2 not found"; exit 1; }
 
       # Each build gets its own immutable release+tag; old releases/tags are
       # never deleted (the shared qmk publish workflow replaces the "latest"
