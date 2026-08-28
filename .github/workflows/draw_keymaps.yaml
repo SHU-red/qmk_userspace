@@ -1,12 +1,8 @@
 name: Draw keymap visualizations
 
 on:
-  workflow_dispatch:  # run manually from the Actions tab
-  push:
-    paths:
-      - "keyboards/**/*.c"
-      - "keymap_drawer/**"
-      - ".github/workflows/draw_keymaps.yaml"
+  push:          # runs on every push
+  workflow_dispatch:  # or manually from the Actions tab
 
 jobs:
   draw:
